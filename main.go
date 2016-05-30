@@ -3,7 +3,6 @@ package raft
 import (
 	"bytes"
 	"encoding/gob"
-	"fmt"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
@@ -48,12 +47,14 @@ func (s *State) GobEncode() ([]byte, error) {
 func (s *State) GobDecode(buf []byte) error {
 	r := bytes.NewBuffer(buf)
 	decoder := gob.NewDecoder(r)
-	return decoder.Decode(&s.currentTerm)
+	return decoder.Decode(&s.CurrentTerm)
 }
 
 type RequestVoteArgs struct {
+	Term int64
 }
 type RequestVoteResponse struct {
+	VoteGranted bool
 }
 type AppendEntriesArgs struct{}
 
@@ -71,8 +72,14 @@ func (s *Service) RequestVote(args *RequestVoteArgs, reply *RequestVoteResponse)
 	buffer := bytes.NewBuffer(data)
 	dec := gob.NewDecoder(buffer)
 	err = dec.Decode(state)
-	fmt.Println(state)
-	reply = &RequestVoteResponse{}
+	if err != nil {
+		return err
+	}
+	if args.Term < state.CurrentTerm {
+		reply = &RequestVoteResponse{false}
+	} else {
+		reply = &RequestVoteResponse{true}
+	}
 
 	return nil
 }
