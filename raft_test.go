@@ -24,13 +24,27 @@ func TestMain(t *testing.T) {
 	if err != nil {
 		t.Errorf("%s", err.Error())
 	}
+	type testCase struct {
+		Term     int64
+		Expected bool
+	}
 
-	args := &RequestVoteArgs{}
-	var reply RequestVoteResponse
-	err = cli.Call("Service.RequestVote", args, &reply)
+	for _, c := range []testCase{
+		testCase{Term: 0, Expected: true},
+		testCase{Term: -1, Expected: false},
+	} {
 
-	if err != nil {
-		t.Errorf("%s", err.Error())
+		args := &RequestVoteArgs{Term: c.Term}
+		var reply RequestVoteResponse
+		err = cli.Call("Service.RequestVote", args, &reply)
+
+		if err != nil {
+			t.Errorf("%s", err.Error())
+		}
+
+		if reply.VoteGranted != c.Expected {
+			t.Errorf("VoteGranted is exptected %v, but got %v", c.Expected, reply.VoteGranted)
+		}
 	}
 
 }
