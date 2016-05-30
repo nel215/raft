@@ -76,9 +76,9 @@ func (s *Service) RequestVote(args *RequestVoteArgs, reply *RequestVoteResponse)
 		return err
 	}
 	if args.Term < state.CurrentTerm {
-		reply = &RequestVoteResponse{false}
+		*reply = RequestVoteResponse{false}
 	} else {
-		reply = &RequestVoteResponse{true}
+		*reply = RequestVoteResponse{true}
 	}
 
 	return nil
