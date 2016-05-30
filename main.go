@@ -42,6 +42,7 @@ func New(config *Config) (*Service, error) {
 
 type State struct {
 	CurrentTerm int64
+	VotedFor    int64
 }
 
 func (s *State) GobEncode() ([]byte, error) {
@@ -51,13 +52,21 @@ func (s *State) GobEncode() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	err = encoder.Encode(s.VotedFor)
+	if err != nil {
+		return nil, err
+	}
 	return w.Bytes(), nil
 }
 
 func (s *State) GobDecode(buf []byte) error {
 	r := bytes.NewBuffer(buf)
 	decoder := gob.NewDecoder(r)
-	return decoder.Decode(&s.CurrentTerm)
+	err := decoder.Decode(&s.CurrentTerm)
+	if err != nil {
+		return err
+	}
+	return decoder.Decode(&s.VotedFor)
 }
 
 type RequestVoteArgs struct {
@@ -85,10 +94,15 @@ func (s *Service) RequestVote(args *RequestVoteArgs, reply *RequestVoteResponse)
 	if err != nil {
 		return err
 	}
+
+	*reply = RequestVoteResponse{VoteGranted: false}
 	if args.Term < state.CurrentTerm {
-		*reply = RequestVoteResponse{false}
-	} else {
-		*reply = RequestVoteResponse{true}
+		return nil
+	}
+
+	// TODO: and candicate's log is at least as up-to-date as receiver's log
+	if state.VotedFor == 0 {
+		reply.VoteGranted = true
 	}
 
 	return nil
