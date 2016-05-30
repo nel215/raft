@@ -6,6 +6,9 @@ import (
 )
 
 func TestMain(t *testing.T) {
-	s := new(Service)
+	s, err := New()
+	if err != nil {
+		t.Errorf("%s", err)
+	}
 	rpc.Register(s)
 }
