@@ -1,6 +1,8 @@
 package raft
 
 import (
+	"bytes"
+	"encoding/gob"
 	"fmt"
 	"github.com/syndtr/goleveldb/leveldb"
 )
@@ -18,11 +20,35 @@ func New() (*Service, error) {
 		return nil, err
 	}
 	defer db.Close()
-	err = db.Put([]byte(CURRENT_TERM), []byte("0"), nil)
+	buf := new(bytes.Buffer)
+	enc := gob.NewEncoder(buf)
+	enc.Encode(&State{CurrentTerm: 0})
+
+	err = db.Put([]byte(CURRENT_TERM), buf.Bytes(), nil)
 	if err != nil {
 		return nil, err
 	}
 	return &Service{}, nil
+}
+
+type State struct {
+	CurrentTerm int64
+}
+
+func (s *State) GobEncode() ([]byte, error) {
+	w := new(bytes.Buffer)
+	encoder := gob.NewEncoder(w)
+	err := encoder.Encode(s.CurrentTerm)
+	if err != nil {
+		return nil, err
+	}
+	return w.Bytes(), nil
+}
+
+func (s *State) GobDecode(buf []byte) error {
+	r := bytes.NewBuffer(buf)
+	decoder := gob.NewDecoder(r)
+	return decoder.Decode(&s.currentTerm)
 }
 
 type RequestVoteArgs struct {
@@ -37,11 +63,15 @@ func (s *Service) RequestVote(args *RequestVoteArgs, reply *RequestVoteResponse)
 		return err
 	}
 	defer db.Close()
-	currentTerm, err := db.Get([]byte(CURRENT_TERM), nil)
+	data, err := db.Get([]byte(CURRENT_TERM), nil)
 	if err != nil {
 		return err
 	}
-	fmt.Println(string(currentTerm))
+	state := new(State)
+	buffer := bytes.NewBuffer(data)
+	dec := gob.NewDecoder(buffer)
+	err = dec.Decode(state)
+	fmt.Println(state)
 	reply = &RequestVoteResponse{}
 
 	return nil
