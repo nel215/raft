@@ -8,7 +8,8 @@ import (
 )
 
 func TestMain(t *testing.T) {
-	s, err := New()
+	config := &Config{DBPath: "./test_db"}
+	s, err := New(config)
 	if err != nil {
 		t.Errorf("%s", err.Error())
 	}

@@ -11,23 +11,33 @@ const (
 )
 
 type Service struct {
+	config *Config
 }
 
-func New() (*Service, error) {
-	db, err := leveldb.OpenFile("./test_db", nil)
+type Config struct {
+	DBPath string
+}
+
+func (s *Service) InitDB() error {
+	db, err := leveldb.OpenFile(s.config.DBPath, nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer db.Close()
 	buf := new(bytes.Buffer)
 	enc := gob.NewEncoder(buf)
 	enc.Encode(&State{CurrentTerm: 0})
 
-	err = db.Put([]byte(CURRENT_TERM), buf.Bytes(), nil)
+	return db.Put([]byte(CURRENT_TERM), buf.Bytes(), nil)
+}
+
+func New(config *Config) (*Service, error) {
+	s := &Service{config: config}
+	err := s.InitDB()
 	if err != nil {
 		return nil, err
 	}
-	return &Service{}, nil
+	return s, nil
 }
 
 type State struct {
@@ -59,7 +69,7 @@ type RequestVoteResponse struct {
 type AppendEntriesArgs struct{}
 
 func (s *Service) RequestVote(args *RequestVoteArgs, reply *RequestVoteResponse) error {
-	db, err := leveldb.OpenFile("./test_db", nil)
+	db, err := leveldb.OpenFile(s.config.DBPath, nil)
 	if err != nil {
 		return err
 	}
