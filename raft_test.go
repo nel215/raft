@@ -7,20 +7,7 @@ import (
 	"testing"
 )
 
-func TestMain(t *testing.T) {
-	config := &Config{DBPath: "./test_db"}
-	s, err := New(config)
-	if err != nil {
-		t.Errorf("%s", err.Error())
-	}
-	rpc.Register(s)
-	rpc.HandleHTTP()
-	l, err := net.Listen("tcp", ":1234")
-	if err != nil {
-		t.Errorf("%s", err.Error())
-	}
-	go http.Serve(l, nil)
-
+func testRequestVote(t *testing.T) {
 	cli, err := rpc.DialHTTP("tcp", ":1234")
 	if err != nil {
 		t.Errorf("%s", err.Error())
@@ -34,7 +21,6 @@ func TestMain(t *testing.T) {
 		testCase{Term: 0, Expected: true},
 		testCase{Term: -1, Expected: false},
 	} {
-
 		args := &RequestVoteArgs{Term: c.Term}
 		var reply RequestVoteResponse
 		err = cli.Call("Service.RequestVote", args, &reply)
@@ -47,5 +33,24 @@ func TestMain(t *testing.T) {
 			t.Errorf("VoteGranted is exptected %v, but got %v", c.Expected, reply.VoteGranted)
 		}
 	}
+}
 
+func setup(t *testing.T) {
+	config := &Config{DBPath: "./test_db"}
+	s, err := New(config)
+	if err != nil {
+		t.Errorf("%s", err.Error())
+	}
+	rpc.Register(s)
+	rpc.HandleHTTP()
+	l, err := net.Listen("tcp", ":1234")
+	if err != nil {
+		t.Errorf("%s", err.Error())
+	}
+	go http.Serve(l, nil)
+}
+
+func TestRPC(t *testing.T) {
+	setup(t)
+	testRequestVote(t)
 }
