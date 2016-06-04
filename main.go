@@ -46,7 +46,13 @@ type RequestVoteArgs struct {
 type RequestVoteResponse struct {
 	VoteGranted bool
 }
-type AppendEntriesArgs struct{}
+type AppendEntriesArgs struct {
+	Term int64
+}
+type AppendEntriesResponse struct {
+	Term    int64
+	Success bool
+}
 
 func (s *Service) getState() (*State, error) {
 	db, err := leveldb.OpenFile(s.config.DBPath, nil)
@@ -86,6 +92,15 @@ func (s *Service) RequestVote(args *RequestVoteArgs, reply *RequestVoteResponse)
 	return nil
 }
 
-func (s *Service) AppendEntries(args *AppendEntriesArgs, reply *string) error {
+func (s *Service) AppendEntries(args *AppendEntriesArgs, reply *AppendEntriesResponse) error {
+	state, err := s.getState()
+	if err != nil {
+		return err
+	}
+	*reply = AppendEntriesResponse{Term: state.CurrentTerm, Success: false}
+	// $5.1
+	if args.Term < state.CurrentTerm {
+		return nil
+	}
 	return nil
 }

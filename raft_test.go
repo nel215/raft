@@ -53,4 +53,20 @@ func setup(t *testing.T) {
 func TestRPC(t *testing.T) {
 	setup(t)
 	testRequestVote(t)
+	cli, err := rpc.DialHTTP("tcp", ":1234")
+	if err != nil {
+		t.Errorf("%s", err.Error())
+	}
+
+	args := &AppendEntriesArgs{Term: 0}
+	var reply AppendEntriesResponse
+	err = cli.Call("Service.AppendEntries", args, &reply)
+
+	if err != nil {
+		t.Errorf("%s", err.Error())
+	}
+
+	if reply.Success != false {
+		t.Errorf("Success is exptected %v, but got %v", false, reply.Success)
+	}
 }
