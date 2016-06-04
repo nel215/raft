@@ -48,24 +48,31 @@ type RequestVoteResponse struct {
 }
 type AppendEntriesArgs struct{}
 
-func (s *Service) RequestVote(args *RequestVoteArgs, reply *RequestVoteResponse) error {
+func (s *Service) getState() (*State, error) {
 	db, err := leveldb.OpenFile(s.config.DBPath, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer db.Close()
 	data, err := db.Get([]byte(CURRENT_TERM), nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	state := new(State)
 	buffer := bytes.NewBuffer(data)
 	dec := gob.NewDecoder(buffer)
 	err = dec.Decode(state)
 	if err != nil {
+		return nil, err
+	}
+	return state, nil
+}
+
+func (s *Service) RequestVote(args *RequestVoteArgs, reply *RequestVoteResponse) error {
+	state, err := s.getState()
+	if err != nil {
 		return err
 	}
-
 	*reply = RequestVoteResponse{VoteGranted: false}
 	if args.Term < state.CurrentTerm {
 		return nil
